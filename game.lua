@@ -4,6 +4,7 @@ function game.load()
 
     gridTransform = {zoomPixels = 64, offsetX = 32, offsetY = 32}
     zoomTween = nil
+    moveTween = nil
     
     
 
@@ -62,7 +63,10 @@ function game.keypressed(key)
     if key == "down" then
         if selection.y + 1 < levelSize.y + 1 then
             selection.y = selection.y + 1
-            --if 
+            
+            if girdTransform.offsetY + gridTransform.zoomPixels * selection.y > height then
+                moveTween = tween.new(0.1, gridTransform, {offsetY = gridTransform.offsetY + gridTransform.zoomPixels}, 'inSine')
+            end
         end
     end
     if key == "left" then
@@ -73,7 +77,11 @@ function game.keypressed(key)
     if key == "right" then
         if selection.x + 1 < levelSize.x + 1 then
             selection.x = selection.x + 1
-        end
+            
+            if girdTransform.offsetX + gridTransform.zoomPixels * selection.x > width then
+                 moveTween = tween.new(0.1, gridTransform, {offsetX = gridTransform.offsetX + gridTransform.zoomPixels}, 'inSine')
+            end
+        end  
     end
     if key == "-" then
         zoomTween = tween.new(0.1, gridTransform, {zoomPixels = gridTransform.zoomPixels - 16}, 'inSine')
