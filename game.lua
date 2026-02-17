@@ -65,13 +65,16 @@ function game.keypressed(key)
             selection.y = selection.y + 1
             
             if girdTransform.offsetY + gridTransform.zoomPixels * selection.y > height then
-                moveTween = tween.new(0.1, gridTransform, {offsetY = gridTransform.offsetY + gridTransform.zoomPixels}, 'inSine')
+                moveTween = tween.new(0.1, gridTransform, {offsetY = gridTransform.offsetY - gridTransform.zoomPixels}, 'inSine')
             end
         end
     end
     if key == "left" then
         if selection.x - 1 > 0 then 
             selection.x = selection.x - 1
+            
+            if girdTransform.offsetX < 0 and girdTransform.offsetX + gridTransform.zoomPixels * selection.x < 0 then
+                moveTween = tween.new(0.1, gridTransform, {offsetX = math.clamp(gridTransform.offsetX + gridTransform.zoomPixels, -10000, 32)}, 'inSine')
         end
     end
     if key == "right" then
@@ -79,7 +82,7 @@ function game.keypressed(key)
             selection.x = selection.x + 1
             
             if girdTransform.offsetX + gridTransform.zoomPixels * selection.x > width then
-                 moveTween = tween.new(0.1, gridTransform, {offsetX = gridTransform.offsetX + gridTransform.zoomPixels}, 'inSine')
+                 moveTween = tween.new(0.1, gridTransform, {offsetX = gridTransform.offsetX - gridTransform.zoomPixels}, 'inSine')
             end
         end  
     end
@@ -95,6 +98,9 @@ function game.update(dt)
     if zoomTween then
         zoomTween:update(dt)
     end
+    if moveTween then
+        moveTween:update(dt)
+    end    
 end
 
 function game.draw()
