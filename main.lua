@@ -6,10 +6,13 @@ scenes.level = require ('game')
 
 state = scenes.level
 
-width, height = love.window.getDimensions()
+width = 0
+height = 0
 
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
+    width = love.graphics.getWidth()
+    height = love.graphics.getHeight()
     if state and type(state.load) == "function" then
         state.load()
     end

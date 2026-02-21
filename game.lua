@@ -58,13 +58,20 @@ function game.keypressed(key)
     if key == "up" then
         if selection.y - 1 > 0 then
             selection.y = selection.y - 1
+
+            if gridTransform.offsetY + gridTransform.zoomPixels * selection.y < gridTransform.zoomPixels then
+                local newOffsetY = gridTransform.offsetY + gridTransform.zoomPixels
+                if newOffsetY > 32 then newOffsetY = 32 end
+
+                moveTween = tween.new(0.1, gridTransform, {offsetY = newOffsetY}, 'inSine')
+            end
         end
     end
     if key == "down" then
         if selection.y + 1 < levelSize.y + 1 then
             selection.y = selection.y + 1
             
-            if girdTransform.offsetY + gridTransform.zoomPixels * selection.y > height then
+            if gridTransform.offsetY + gridTransform.zoomPixels * selection.y > height then
                 moveTween = tween.new(0.1, gridTransform, {offsetY = gridTransform.offsetY - gridTransform.zoomPixels}, 'inSine')
             end
         end
@@ -73,15 +80,19 @@ function game.keypressed(key)
         if selection.x - 1 > 0 then 
             selection.x = selection.x - 1
             
-            if girdTransform.offsetX < 0 and girdTransform.offsetX + gridTransform.zoomPixels * selection.x < 0 then
-                moveTween = tween.new(0.1, gridTransform, {offsetX = math.clamp(gridTransform.offsetX + gridTransform.zoomPixels, -10000, 32)}, 'inSine')
+            if gridTransform.offsetX + gridTransform.zoomPixels * selection.x < gridTransform.zoomPixels then
+                local newOffsetX = gridTransform.offsetX + gridTransform.zoomPixels
+                if newOffsetX > 32 then newOffsetX = 32 end
+
+                moveTween = tween.new(0.1, gridTransform, {offsetX = newOffsetX}, 'inSine')
+            end
         end
     end
     if key == "right" then
         if selection.x + 1 < levelSize.x + 1 then
             selection.x = selection.x + 1
             
-            if girdTransform.offsetX + gridTransform.zoomPixels * selection.x > width then
+            if gridTransform.offsetX + gridTransform.zoomPixels * selection.x > width then
                  moveTween = tween.new(0.1, gridTransform, {offsetX = gridTransform.offsetX - gridTransform.zoomPixels}, 'inSine')
             end
         end  
