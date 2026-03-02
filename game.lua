@@ -27,8 +27,18 @@ function game.load()
 
     flagged = love.graphics.newQuad(16 * 10, 0, 16, 16, mainSprites)
     cell0 = love.graphics.newQuad(16 * 11, 0, 16, 16, mainSprites)
-    selectionFrame1 = love.graphics.newQuad(0, 16, 16, 16, mainSprites)
     
+    selectionFrame1 = love.graphics.newQuad(0, 16, 16, 16, mainSprites)
+    selectionFrame2 = love.graphics.newQuad(16, 16, 16, 16, mainSprites)
+    selectionFrame3 = love.graphics.newQuad(16 * 2, 16, 16, 16, mainSprites)
+    selectionFrame4 = love.graphics.newQuad(16 * 3, 16, 16, 16, mainSprites)
+
+
+    animations = {}
+
+    animations.selectionSprite = animater.new({selectionFrame1, selectionFrame2, selectionFrame3, selectionFrame4}, 0.2)
+
+
     -- load level
     level = require("Levels/Level 1 - Simple Going")
 
@@ -261,8 +271,7 @@ local function drawGrid(gridX, gridY, size) -- sizex and y are the pixel size no
             end
 
             if selection.y == y and selection.x == x then
-                --todo animate
-                love.graphics.draw(mainSprites, selectionFrame1, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+                love.graphics.draw(mainSprites, animations.selectionSprite.currentFrame, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
             end
 
         end
@@ -359,6 +368,7 @@ function game.keypressed(key)
 end
 
 function game.update(dt)
+    animater.update(animations, dt)
     if zoomTween then
         zoomTween:update(dt)
     end

@@ -1,4 +1,5 @@
 tween = require 'tween'
+animater = require 'animater'
 
 scenes = {}
 scenes.level = require ('game')
