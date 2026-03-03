@@ -33,10 +33,16 @@ function game.load()
     selectionFrame3 = love.graphics.newQuad(16 * 2, 16, 16, 16, mainSprites)
     selectionFrame4 = love.graphics.newQuad(16 * 3, 16, 16, 16, mainSprites)
 
+    waterFrame1 = love.graphics.newQuad(16 * 14, 16, 16, 16, mainSprites)
+    waterFrame2 = love.graphics.newQuad(16 * 15, 16, 16, 16, mainSprites)
+    waterFrame3 = love.graphics.newQuad(16 * 16, 16, 16, 16, mainSprites)
+    waterFrame4 = love.graphics.newQuad(16 * 17, 16, 16, 16, mainSprites)
 
     animations = {}
 
     animations.selectionSprite = animater.new({selectionFrame1, selectionFrame2, selectionFrame3, selectionFrame4}, 0.2)
+    animations.water = animater.new({waterFrame1, waterFrame2, waterFrame3, waterFrame4}, 0.2)
+
 
 
     -- load level
@@ -252,8 +258,22 @@ end
 --------------------------------------------------Drawing Functions-------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------
 
+local function drawBackground(size)
+    local ySize = 0
+    local xSize = 0
 
-local function drawGrid(gridX, gridY, size) -- sizex and y are the pixel size not a scale factor 
+    while ySize < height do
+        while xSize < width do
+            love.graphics.draw(mainSprites, animations.water.currentFrame, xSize, ySize, 0, size / 16, size / 16)
+            xSize = xSize + size
+        end
+        ySize = ySize + size
+        xSize = 0
+    end
+
+end
+
+local function drawGrid(gridX, gridY, size) -- size are the pixel size not a scale factor 
 
 
 
@@ -378,6 +398,7 @@ function game.update(dt)
 end
 
 function game.draw()
+    drawBackground(gridTransform.zoomPixels)
     drawGrid(gridTransform.offsetX, gridTransform.offsetY, gridTransform.zoomPixels)
 end
 
