@@ -66,7 +66,24 @@ function game.load()
 
 
 
-    selection = {y = 3,x = 4} 
+    selection = {y = 3,x = 4}
+    
+    -- Center the entire grid on the screen
+    local gridWidth = levelSize.x * gridTransform.zoomPixels
+    local gridHeight = levelSize.y * gridTransform.zoomPixels
+    gridTransform.offsetX = (width - gridWidth) / 2
+    gridTransform.offsetY = (height - gridHeight) / 2
+    -- ensure the offsets respect the border constraints even on first load
+    do
+        local boundX1 = width - gridWidth - minBorder
+        local boundX2 = minBorder
+        local boundY1 = height - gridHeight - minBorder
+        local boundY2 = minBorder
+        local lowX, highX = math.min(boundX1, boundX2), math.max(boundX1, boundX2)
+        local lowY, highY = math.min(boundY1, boundY2), math.max(boundY1, boundY2)
+        gridTransform.offsetX = math.max(math.min(gridTransform.offsetX, highX), lowX)
+        gridTransform.offsetY = math.max(math.min(gridTransform.offsetY, highY), lowY)
+    end
 end
 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -74,20 +91,54 @@ end
 --------------------------------------------------------------------------------------------------------------------------------
 
 
-local function getValidBounds(zoom)
-    -- Ensure the rightmost and bottommost cells end before the screen edge
-    local maxOffsetX = math.min(minBorder, width - levelSize.x * zoom)
-    local maxOffsetY = math.min(minBorder, height - levelSize.y * zoom)
-    return maxOffsetX - minBorder , maxOffsetY - minBorder
+-- clampOffsets ensures the grid remains at least a border's width
+-- inside the window. The offsets provided are the position of the top-left
+-- cell (x=1,y=1) in pixel coordinates.
+local function clampOffsets(offsetX, offsetY, zoom)
+    local gridWidth = levelSize.x * zoom
+    local gridHeight = levelSize.y * zoom
+
+    -- off bounds relative to the screen edges
+    local boundX1 = width - gridWidth - minBorder
+    local boundX2 = minBorder
+    local boundY1 = height - gridHeight - minBorder
+    local boundY2 = minBorder
+
+    -- ensure low/high ordering so clamping works even if grid fits with
+    -- room on both sides (bound1 may be greater than bound2).
+    local lowX, highX = math.min(boundX1, boundX2), math.max(boundX1, boundX2)
+    local lowY, highY = math.min(boundY1, boundY2), math.max(boundY1, boundY2)
+
+    offsetX = math.max(math.min(offsetX, highX), lowX)
+    offsetY = math.max(math.min(offsetY, highY), lowY)
+
+    return offsetX, offsetY
 end
 
-local function clampOffsets(offsetX, offsetY, zoom)
-    local maxOffsetX, maxOffsetY = getValidBounds(zoom)
-    offsetX = math.max(offsetX, maxOffsetX)
-    offsetX = math.min(offsetX, minBorder)
-    offsetY = math.max(offsetY, maxOffsetY)
-    offsetY = math.min(offsetY, minBorder)
-    return offsetX, offsetY
+-- ensure the currently selected cell is within the visible window. Returns
+-- new offsets (possibly unchanged) which should then be applied (tweened).
+local function ensureSelectionVisible()
+    local zoom = gridTransform.zoomPixels
+    local selX = gridTransform.offsetX + (selection.x - 1) * zoom
+    local selY = gridTransform.offsetY + (selection.y - 1) * zoom
+
+    local newOffX = gridTransform.offsetX
+    local newOffY = gridTransform.offsetY
+
+    if selX < 0 then
+        newOffX = newOffX - selX
+    elseif selX + zoom > width then
+        newOffX = newOffX - (selX + zoom - width)
+    end
+
+    if selY < 0 then
+        newOffY = newOffY - selY
+    elseif selY + zoom > height then
+        newOffY = newOffY - (selY + zoom - height)
+    end
+
+    newOffX, newOffY = clampOffsets(newOffX, newOffY, zoom)
+    return newOffX, newOffY
 end
 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -325,66 +376,115 @@ function game.keypressed(key)
         if selection.y - 1 > 0 then
             selection.y = selection.y - 1
             zoomTween = nil
-            local targetOffsetX = minBorder - gridTransform.zoomPixels * selection.x + width / 2
-            local targetOffsetY = minBorder - gridTransform.zoomPixels * selection.y + height / 2
-            targetOffsetX, targetOffsetY = clampOffsets(targetOffsetX, targetOffsetY, gridTransform.zoomPixels)
-            moveTween = tween.new(0.1, gridTransform, {offsetX = targetOffsetX, offsetY = targetOffsetY}, 'inSine')
+            -- pan if necessary
+            local tx, ty = ensureSelectionVisible()
+            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+            end
         end
     end
     if key == "down" then
         if selection.y + 1 < levelSize.y + 1 then
             selection.y = selection.y + 1
             zoomTween = nil
-            local targetOffsetX = minBorder - gridTransform.zoomPixels * selection.x + width / 2
-            local targetOffsetY = minBorder - gridTransform.zoomPixels * selection.y + height / 2
-            targetOffsetX, targetOffsetY = clampOffsets(targetOffsetX, targetOffsetY, gridTransform.zoomPixels)
-            moveTween = tween.new(0.1, gridTransform, {offsetX = targetOffsetX, offsetY = targetOffsetY}, 'inSine')
+            local tx, ty = ensureSelectionVisible()
+            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+            end
         end
     end
     if key == "left" then
         if selection.x - 1 > 0 then 
             selection.x = selection.x - 1
             zoomTween = nil
-            local targetOffsetX = minBorder - gridTransform.zoomPixels * selection.x + width / 2
-            local targetOffsetY = minBorder - gridTransform.zoomPixels * selection.y + height / 2
-            targetOffsetX, targetOffsetY = clampOffsets(targetOffsetX, targetOffsetY, gridTransform.zoomPixels)
-            moveTween = tween.new(0.1, gridTransform, {offsetX = targetOffsetX, offsetY = targetOffsetY}, 'inSine')
+            local tx, ty = ensureSelectionVisible()
+            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+            end
         end
     end
     if key == "right" then
         if selection.x + 1 < levelSize.x + 1 then
             selection.x = selection.x + 1
             zoomTween = nil
-            local targetOffsetX = minBorder - gridTransform.zoomPixels * selection.x + width / 2
-            local targetOffsetY = minBorder - gridTransform.zoomPixels * selection.y + height / 2
-            targetOffsetX, targetOffsetY = clampOffsets(targetOffsetX, targetOffsetY, gridTransform.zoomPixels)
-            moveTween = tween.new(0.1, gridTransform, {offsetX = targetOffsetX, offsetY = targetOffsetY}, 'inSine')
+            local tx, ty = ensureSelectionVisible()
+            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+            end
         end  
     end
     if key == "-" then
         moveTween = nil
+        -- compute maximum zoom that still leaves a border of water
+        local maxZoomX = math.floor((width - 2 * minBorder) / levelSize.x)
+        local maxZoomY = math.floor((height - 2 * minBorder) / levelSize.y)
+        local maxZoom = math.min(maxZoomX, maxZoomY)
+
         local newZoom = gridTransform.zoomPixels - 16
-        local targetOffsetX = minBorder - newZoom * selection.x + width / 2
-        local targetOffsetY = minBorder - newZoom * selection.y + height / 2
-        targetOffsetX, targetOffsetY = clampOffsets(targetOffsetX, targetOffsetY, newZoom)
-        
+        newZoom = math.max(16, newZoom)                  -- don't go below one cell
+        newZoom = math.min(newZoom, maxZoom)            -- enforce water margin
+
+        local gridW = levelSize.x * newZoom
+        local gridH = levelSize.y * newZoom
+        local newOffsetX = (width - gridW) / 2
+        local newOffsetY = (height - gridH) / 2
+        newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+        -- ensure selection still visible after zoom using the new offsets
+        do
+            local selPixelX = newOffsetX + (selection.x - 1) * newZoom
+            local selPixelY = newOffsetY + (selection.y - 1) * newZoom
+            if selPixelX < 0 then
+                newOffsetX = newOffsetX - selPixelX
+            elseif selPixelX + newZoom > width then
+                newOffsetX = newOffsetX - (selPixelX + newZoom - width)
+            end
+            if selPixelY < 0 then
+                newOffsetY = newOffsetY - selPixelY
+            elseif selPixelY + newZoom > height then
+                newOffsetY = newOffsetY - (selPixelY + newZoom - height)
+            end
+            newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+        end
         zoomTween = tween.new(0.1, gridTransform, {
             zoomPixels = newZoom,
-            offsetX = targetOffsetX,
-            offsetY = targetOffsetY
+            offsetX = newOffsetX,
+            offsetY = newOffsetY
         }, 'inSine')
     end
     if key == "=" then
         moveTween = nil
+        -- compute maximum zoom that still leaves a border of water
+        local maxZoomX = math.floor((width - 2 * minBorder) / levelSize.x)
+        local maxZoomY = math.floor((height - 2 * minBorder) / levelSize.y)
+        local maxZoom = math.min(maxZoomX, maxZoomY)
+
         local newZoom = gridTransform.zoomPixels + 16
-        local targetOffsetX = minBorder - newZoom * selection.x + width / 2
-        local targetOffsetY = minBorder - newZoom * selection.y + height / 2
-        targetOffsetX, targetOffsetY = clampOffsets(targetOffsetX, targetOffsetY, newZoom)
-        
+        newZoom = math.min(newZoom, maxZoom)
+        local gridW = levelSize.x * newZoom
+        local gridH = levelSize.y * newZoom
+        local newOffsetX = (width - gridW) / 2
+        local newOffsetY = (height - gridH) / 2
+        newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+        -- check selection relative to the new offsets
+        do
+            local selPixelX = newOffsetX + (selection.x - 1) * newZoom
+            local selPixelY = newOffsetY + (selection.y - 1) * newZoom
+            if selPixelX < 0 then
+                newOffsetX = newOffsetX - selPixelX
+            elseif selPixelX + newZoom > width then
+                newOffsetX = newOffsetX - (selPixelX + newZoom - width)
+            end
+            if selPixelY < 0 then
+                newOffsetY = newOffsetY - selPixelY
+            elseif selPixelY + newZoom > height then
+                newOffsetY = newOffsetY - (selPixelY + newZoom - height)
+            end
+            newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+        end
         zoomTween = tween.new(0.1, gridTransform, {
             zoomPixels = newZoom,
-            offsetX = targetOffsetX,
-            offsetY = targetOffsetY
+            offsetX = newOffsetX,
+            offsetY = newOffsetY
         }, 'inSine')
     end
     if key == "z" then
