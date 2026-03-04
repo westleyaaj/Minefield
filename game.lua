@@ -27,6 +27,10 @@ function game.load()
 
     flagged = love.graphics.newQuad(16 * 10, 0, 16, 16, mainSprites)
     cell0 = love.graphics.newQuad(16 * 11, 0, 16, 16, mainSprites)
+
+    bottomBorder = love.graphics.newQuad(16 * 11, 16, 16, 16, mainSprites)
+    sideBorder = love.graphics.newQuad(16 * 13, 16, 16, 16, mainSprites)
+    cornerBorder = love.graphics.newQuad(16 * 12, 16, 16, 16, mainSprites)
     
     selectionFrame1 = love.graphics.newQuad(0, 16, 16, 16, mainSprites)
     selectionFrame2 = love.graphics.newQuad(16, 16, 16, 16, mainSprites)
@@ -275,19 +279,30 @@ end
 
 local function drawGrid(gridX, gridY, size) -- size are the pixel size not a scale factor 
 
-
-
     for y, row in ipairs(levelGrids.mines) do
         for x, cell in ipairs(row) do
             
             if levelGrids.mines[y][x] ~= 2 and levelGrids.flags[y][x] == 0 then
                 love.graphics.draw(mainSprites, cell0, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+
             end
             if levelGrids.mines[y][x] ~= 2 and levelGrids.flags[y][x] == 1 then
                 love.graphics.draw(mainSprites, getNearByMinesSprite(y, x), size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+
             end
             if levelGrids.mines[y][x] ~= 2 and levelGrids.flags[y][x] == 2 then
                 love.graphics.draw(mainSprites, flagged, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+
+            end
+            
+            if levelGrids.mines[y][x] ~= 2 and y == levelSize.y then
+                love.graphics.draw(mainSprites, bottomBorder, size * x + gridX - size, size * y + gridY , 0, size / 16, size / 16)
+            end
+            if levelGrids.mines[y][x] ~= 2 and x == levelSize.x then
+                love.graphics.draw(mainSprites, sideBorder, size * x + gridX, size * y + gridY - size , 0, size / 16, size / 16)
+            end
+            if levelGrids.mines[y][x] ~= 2 and x == levelSize.x and y == levelSize.y then
+                love.graphics.draw(mainSprites, cornerBorder, size * x + gridX, size * y + gridY , 0, size / 16, size / 16)
             end
 
             if selection.y == y and selection.x == x then
@@ -295,6 +310,7 @@ local function drawGrid(gridX, gridY, size) -- size are the pixel size not a sca
             end
 
         end
+
     end
 
 end
