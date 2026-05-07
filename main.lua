@@ -1,5 +1,7 @@
 tween = require 'tween'
+timer = require 'timer'
 animater = require 'animater'
+uiHelper = require 'uiHelper'
 
 scenes = {}
 scenes.level = require ('game')
@@ -7,13 +9,26 @@ scenes.level = require ('game')
 
 state = scenes.level
 
-width = 0
-height = 0
 
 function love.load()
+    love.keyboard.setKeyRepeat(true)
     love.graphics.setDefaultFilter('nearest', 'nearest')
     width = love.graphics.getWidth()
     height = love.graphics.getHeight()
+
+    setUiSize = 1
+    fontSize1 = love.graphics.newFont("Font/Born2bSportyFS.otf", 24)
+    fontSize2 = love.graphics.newFont("Font/Born2bSportyFS.otf", 48)
+    fontSize3 = love.graphics.newFont("Font/Born2bSportyFS.otf", 72)
+
+    colorIndex = {
+        text = {1, 1, 1},
+        progress = {0.27, 0.0, 0.82},    
+        timer    = {0.13, 0.69, 0.0},    
+        name     = {0.96, 0.35, 0.24}
+    }
+
+
     if state and type(state.load) == "function" then
         state.load()
     end
@@ -68,3 +83,4 @@ function love.keypressed(key)
         state.keypressed(key)
     end                                                                                                                                                            
 end
+

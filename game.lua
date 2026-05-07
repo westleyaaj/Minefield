@@ -1,95 +1,16 @@
 game = {}
 
-function game.load()
 
-    minBorder = 64
-    
-    gridTransform = {zoomPixels = 64, offsetX = 48, offsetY = 48}
-    zoomTween = nil
-    moveTween = nil
-    
-    
-
-    -- load sprites
-    mainSprites = love.graphics.newImage("Sprites/LevelTileSet.png")
-
-    --todo themes
-    number0 = love.graphics.newQuad(16 * 9, 0, 16, 16, mainSprites)
-    number1 = love.graphics.newQuad(0, 0, 16, 16, mainSprites)
-    number2 = love.graphics.newQuad(16, 0, 16, 16, mainSprites)
-    number3 = love.graphics.newQuad(16 * 2, 0, 16, 16, mainSprites)
-    number4 = love.graphics.newQuad(16 * 3, 0, 16, 16, mainSprites)
-    number5 = love.graphics.newQuad(16 * 4, 0, 16, 16, mainSprites)
-    number6 = love.graphics.newQuad(16 * 5, 0, 16, 16, mainSprites)
-    number7 = love.graphics.newQuad(16 * 6, 0, 16, 16, mainSprites)
-    number8 = love.graphics.newQuad(16 * 7, 0, 16, 16, mainSprites)
-    number9 = love.graphics.newQuad(16 * 8, 0, 16, 16, mainSprites)
-
-    flagged = love.graphics.newQuad(16 * 10, 0, 16, 16, mainSprites)
-    cell0 = love.graphics.newQuad(16 * 11, 0, 16, 16, mainSprites)
-
-    bottomBorder = love.graphics.newQuad(16 * 11, 16, 16, 16, mainSprites)
-    sideBorder = love.graphics.newQuad(16 * 13, 16, 16, 16, mainSprites)
-    cornerBorder = love.graphics.newQuad(16 * 12, 16, 16, 16, mainSprites)
-    
-    selectionFrame1 = love.graphics.newQuad(0, 16, 16, 16, mainSprites)
-    selectionFrame2 = love.graphics.newQuad(16, 16, 16, 16, mainSprites)
-    selectionFrame3 = love.graphics.newQuad(16 * 2, 16, 16, 16, mainSprites)
-    selectionFrame4 = love.graphics.newQuad(16 * 3, 16, 16, 16, mainSprites)
-
-    waterFrame1 = love.graphics.newQuad(16 * 14, 16, 16, 16, mainSprites)
-    waterFrame2 = love.graphics.newQuad(16 * 15, 16, 16, 16, mainSprites)
-    waterFrame3 = love.graphics.newQuad(16 * 16, 16, 16, 16, mainSprites)
-    waterFrame4 = love.graphics.newQuad(16 * 17, 16, 16, 16, mainSprites)
-
-    animations = {}
-
-    animations.selectionSprite = animater.new({selectionFrame1, selectionFrame2, selectionFrame3, selectionFrame4}, 0.2)
-    animations.water = animater.new({waterFrame1, waterFrame2, waterFrame3, waterFrame4}, 0.2)
-
-
-
-    -- load level
-    level = require("Levels/Level 1 - Simple Going")
-
-    levelGrids = {}
-
-    levelGrids.mines = level.mines -- 0 = safe, 1 = mine, 2 = empty 
-    levelGrids.flags = level.flags -- 0 = hidden 1 = revealed 2 = flagged
-    levelGrids.modifiers = level.mods -- 0 = none 1 = Up 2 = Right 3 = Down 4 = Left
-    levelGrids.walls = level.walls
-
-    levelSize = {}
-
-    levelSize.y = #levelGrids.mines
-    levelSize.x = #levelGrids.mines[1]
-
-
-
-    selection = {y = 3,x = 4}
-    
-    -- Center the entire grid on the screen
-    local gridWidth = levelSize.x * gridTransform.zoomPixels
-    local gridHeight = levelSize.y * gridTransform.zoomPixels
-    gridTransform.offsetX = (width - gridWidth) / 2
-    gridTransform.offsetY = (height - gridHeight) / 2
-    -- ensure the offsets respect the border constraints even on first load
-    do
-        local boundX1 = width - gridWidth - minBorder
-        local boundX2 = minBorder
-        local boundY1 = height - gridHeight - minBorder
-        local boundY2 = minBorder
-        local lowX, highX = math.min(boundX1, boundX2), math.max(boundX1, boundX2)
-        local lowY, highY = math.min(boundY1, boundY2), math.max(boundY1, boundY2)
-        gridTransform.offsetX = math.max(math.min(gridTransform.offsetX, highX), lowX)
-        gridTransform.offsetY = math.max(math.min(gridTransform.offsetY, highY), lowY)
-    end
-end
 
 --------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------Helper Functions-------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------
 
+
+
+local function get(t, y, x)
+    return t[y] and t[y][x]
+end
 
 -- clampOffsets ensures the grid remains at least a border's width
 -- inside the window. The offsets provided are the position of the top-left
@@ -149,10 +70,6 @@ local function getNearByMinesSprite(y, x)
     local mineCount = 0
     
    if levelGrids.modifiers[y][x] == 0 then
-        local function get(t, y, x)
-            return t[y] and t[y][x]
-        end
-
 
         -- above
         if get(levelGrids.mines, y - 1, x) == 1 then
@@ -308,6 +225,37 @@ local function getNearByMinesSprite(y, x)
 
 end
 
+local function fail(step, x, y)
+    if step == 1 then
+        love.audio.play(boom)
+        flashTween = tween.new(0.1, flashEffect, {1, 1, 1, 1}, 'inSine')
+        timer.after(1, function() fail(2, x, y) end)
+    elseif step == 2 then
+        for y, row in ipairs(levelGrids.flags) do
+            for x, cell in ipairs(row) do
+                levelGrids.flags[y][x] = 0
+            end 
+        end 
+
+        print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+
+        levelGrids.flags[y][x] = 2
+
+        flashTween = tween.new(1, flashEffect, {1, 1, 1, 0}, 'inSine')
+    end
+
+end
+
+function formatTime(timerValue)
+    -- Assuming timerValue is 1.0 per second (incrementing by 0.1 every 0.1s)
+    local minutes = math.floor(timerValue / 600)
+    local seconds = math.floor((timerValue / 10) % 60)
+    local tenths  = math.floor(timerValue % 10)
+
+    -- %02d pads integers to 2 digits with a leading zero
+    -- %d is a standard intege 
+    return string.format("%02d:%02d.%d", minutes, seconds, tenths)
+end
 
 --------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------Drawing Functions-------------------------------------------------------------
@@ -346,6 +294,23 @@ local function drawGrid(gridX, gridY, size) -- size are the pixel size not a sca
 
             end
             
+            -- Borders
+
+            if levelGrids.mines[y][x] == 2 then
+                if get(levelGrids.mines, y, x - 1) ~= 2 and get(levelGrids.mines, y - 1, x ) ~= 2 and y - 1 ~= 0 then 
+                    love.graphics.draw(mainSprites, InteriorCornerBorder, size * x + gridX - size, size * y + gridY - size , 0, size / 16, size / 16)
+                elseif get(levelGrids.mines, y, x - 1) ~= 2 then
+                    love.graphics.draw(mainSprites, sideBorder, size * x + gridX - size, size * y + gridY - size , 0, size / 16, size / 16)
+                    if y == levelSize.y then
+                        love.graphics.draw(mainSprites, cornerBorder, size * x + gridX - size, size * y + gridY , 0, size / 16, size / 16)
+                    end
+                elseif get(levelGrids.mines, y - 1, x ) ~= 2 then
+                    love.graphics.draw(mainSprites, bottomBorder, size * x + gridX - size, size * y + gridY - size , 0, size / 16, size / 16)
+                end
+
+            end
+
+
             if levelGrids.mines[y][x] ~= 2 and y == levelSize.y then
                 love.graphics.draw(mainSprites, bottomBorder, size * x + gridX - size, size * y + gridY , 0, size / 16, size / 16)
             end
@@ -366,6 +331,21 @@ local function drawGrid(gridX, gridY, size) -- size are the pixel size not a sca
 
 end
 
+function resize()
+    width, height = love.graphics.getDimensions()
+    
+    -- Recenter the grid
+    local gridWidth = levelSize.x * gridTransform.zoomPixels
+    local gridHeight = levelSize.y * gridTransform.zoomPixels
+    gridTransform.offsetX = (width - gridWidth) / 2
+    gridTransform.offsetY = (height - gridHeight) / 2
+    
+    -- Clamp the offsets to respect borders
+    gridTransform.offsetX, gridTransform.offsetY = clampOffsets(gridTransform.offsetX, gridTransform.offsetY, gridTransform.zoomPixels)
+    
+    -- Cancel any ongoing move tween to prevent it from overriding the recentering
+    moveTween = nil
+end
 --------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------Export Functions-------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------
@@ -378,7 +358,11 @@ function game.keypressed(key)
             zoomTween = nil
             -- pan if necessary
             local tx, ty = ensureSelectionVisible()
+
+            
+
             if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                ty = ty - scrolloffset
                 moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
             end
         end
@@ -388,7 +372,11 @@ function game.keypressed(key)
             selection.y = selection.y + 1
             zoomTween = nil
             local tx, ty = ensureSelectionVisible()
+
+            
+
             if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                ty = ty + scrolloffset
                 moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
             end
         end
@@ -398,7 +386,12 @@ function game.keypressed(key)
             selection.x = selection.x - 1
             zoomTween = nil
             local tx, ty = ensureSelectionVisible()
+
+            
+
+
             if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                tx = tx + scrolloffset
                 moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
             end
         end
@@ -408,22 +401,18 @@ function game.keypressed(key)
             selection.x = selection.x + 1
             zoomTween = nil
             local tx, ty = ensureSelectionVisible()
+
+             
+
             if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                tx = tx - scrolloffset
                 moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
             end
         end  
     end
     if key == "-" then
         moveTween = nil
-        -- compute maximum zoom that still leaves a border of water
-        local maxZoomX = math.floor((width - 2 * minBorder) / levelSize.x)
-        local maxZoomY = math.floor((height - 2 * minBorder) / levelSize.y)
-        local maxZoom = math.min(maxZoomX, maxZoomY)
-
         local newZoom = gridTransform.zoomPixels - 16
-        newZoom = math.max(16, newZoom)                  -- don't go below one cell
-        newZoom = math.min(newZoom, maxZoom)            -- enforce water margin
-
         local gridW = levelSize.x * newZoom
         local gridH = levelSize.y * newZoom
         local newOffsetX = (width - gridW) / 2
@@ -453,13 +442,7 @@ function game.keypressed(key)
     end
     if key == "=" then
         moveTween = nil
-        -- compute maximum zoom that still leaves a border of water
-        local maxZoomX = math.floor((width - 2 * minBorder) / levelSize.x)
-        local maxZoomY = math.floor((height - 2 * minBorder) / levelSize.y)
-        local maxZoom = math.min(maxZoomX, maxZoomY)
-
         local newZoom = gridTransform.zoomPixels + 16
-        newZoom = math.min(newZoom, maxZoom)
         local gridW = levelSize.x * newZoom
         local gridH = levelSize.y * newZoom
         local newOffsetX = (width - gridW) / 2
@@ -490,7 +473,10 @@ function game.keypressed(key)
     if key == "z" then
         if levelGrids.mines[selection.y][selection.x] == 0 then
             levelGrids.flags[selection.y][selection.x] = 1
+        elseif levelGrids.mines[selection.y][selection.x] == 1 then
+            fail(1, selection.x, selection.y)
         end
+
     end 
     if key == "x" then
         if levelGrids.flags[selection.y][selection.x] ~= 1 then
@@ -500,10 +486,15 @@ function game.keypressed(key)
                 levelGrids.flags[selection.y][selection.x] = 2
             end
         end
-    end   
+    end  
+    if key == "r" then 
+        resize()
+        width, height = love.graphics.getDimensions()
+    end
 end
 
 function game.update(dt)
+    timer.update(dt)
     animater.update(animations, dt)
     if zoomTween then
         zoomTween:update(dt)
@@ -511,11 +502,152 @@ function game.update(dt)
     if moveTween then
         moveTween:update(dt)
     end    
+    if flashTween then
+        flashTween:update(dt)
+    end    
+end
+
+function game.load()
+    width, height = love.graphics.getDimensions()
+
+    minBorder = 64
+    
+    gridTransform = {zoomPixels = 64, offsetX = 48, offsetY = 48}
+    zoomTween = nil
+    moveTween = nil
+    flashTween = nil
+
+
+   
+
+    
+    scrolloffset = 60 --used to offset the output of ensureSelectionVisible() so that the water and border can be seen 
+
+
+    -- load level
+    level = require("Levels/Test1")
+
+    levelGrids = {}
+
+    levelGrids.mines = level.mines -- 0 = safe, 1 = mine, 2 = empty 
+    levelGrids.flags = level.flags -- 0 = hidden 1 = revealed 2 = flagged
+    levelGrids.modifiers = level.mods -- 0 = none 1 = Up 2 = Right 3 = Down 4 = Left
+    levelGrids.walls = level.walls
+
+    goalTime = 5000
+
+    levelSize = {}
+
+    levelSize.y = #levelGrids.mines
+    levelSize.x = #levelGrids.mines[1]
+
+    --load sound
+    boom = love.audio.newSource("Sounds/boomAndFlash.wav", "stream")
+
+    -- load sprites
+    mainSprites = love.graphics.newImage("Sprites/LevelTileSet.png")
+
+    --todo themes
+    number0 = love.graphics.newQuad(16 * 9, 0, 16, 16, mainSprites)
+    number1 = love.graphics.newQuad(0, 0, 16, 16, mainSprites)
+    number2 = love.graphics.newQuad(16, 0, 16, 16, mainSprites)
+    number3 = love.graphics.newQuad(16 * 2, 0, 16, 16, mainSprites)
+    number4 = love.graphics.newQuad(16 * 3, 0, 16, 16, mainSprites)
+    number5 = love.graphics.newQuad(16 * 4, 0, 16, 16, mainSprites)
+    number6 = love.graphics.newQuad(16 * 5, 0, 16, 16, mainSprites)
+    number7 = love.graphics.newQuad(16 * 6, 0, 16, 16, mainSprites)
+    number8 = love.graphics.newQuad(16 * 7, 0, 16, 16, mainSprites)
+    number9 = love.graphics.newQuad(16 * 8, 0, 16, 16, mainSprites)
+
+    flagged = love.graphics.newQuad(16 * 10, 0, 16, 16, mainSprites)
+    cell0 = love.graphics.newQuad(16 * 11, 0, 16, 16, mainSprites)
+    cell1 = love.graphics.newQuad(16 * 12, 0, 16, 16, mainSprites)
+    cell2 = love.graphics.newQuad(16 * 13, 0, 16, 16, mainSprites)
+    cell3 = love.graphics.newQuad(16 * 14, 0, 16, 16, mainSprites)
+
+    bottomBorder = love.graphics.newQuad(16 * 11, 16, 16, 16, mainSprites)
+    sideBorder = love.graphics.newQuad(16 * 13, 16, 16, 16, mainSprites)
+    cornerBorder = love.graphics.newQuad(16 * 12, 16, 16, 16, mainSprites)
+    InteriorCornerBorder = love.graphics.newQuad(16 * 11, 32, 16, 16, mainSprites)
+    
+    selectionFrame1 = love.graphics.newQuad(0, 16, 16, 16, mainSprites)
+    selectionFrame2 = love.graphics.newQuad(16, 16, 16, 16, mainSprites)
+    selectionFrame3 = love.graphics.newQuad(16 * 2, 16, 16, 16, mainSprites)
+    selectionFrame4 = love.graphics.newQuad(16 * 3, 16, 16, 16, mainSprites)
+
+    waterFrame1 = love.graphics.newQuad(16 * 14, 16, 16, 16, mainSprites)
+    waterFrame2 = love.graphics.newQuad(16 * 15, 16, 16, 16, mainSprites)
+    waterFrame3 = love.graphics.newQuad(16 * 16, 16, 16, 16, mainSprites)
+    waterFrame4 = love.graphics.newQuad(16 * 17, 16, 16, 16, mainSprites)
+
+    animations = {}
+
+    animations.selectionSprite = animater.new({selectionFrame1, selectionFrame2, selectionFrame3, selectionFrame4}, 0.2)
+    animations.water = animater.new({waterFrame1, waterFrame2, waterFrame3, waterFrame4}, 0.3)
+
+
+    -- Ui
+
+    
+    flashEffect = {0,0,0,0}
+    
+
+    uiPanel1 = love.graphics.newQuad(16 * 7, 16 * 2, 16, 16, mainSprites)
+    uiPanel2 = love.graphics.newQuad(16 * 8, 16 * 2, 16, 16, mainSprites)
+    uiPanel3 = love.graphics.newQuad(16 * 9, 16 * 2, 16, 16, mainSprites)
+    uiPanel4 = love.graphics.newQuad(16 * 7, 16 * 3, 16, 16, mainSprites)
+    uiPanel5 = love.graphics.newQuad(16 * 8, 16 * 3, 16, 16, mainSprites)
+    uiPanel6 = love.graphics.newQuad(16 * 9, 16 * 3, 16, 16, mainSprites)
+    uiPanel7 = love.graphics.newQuad(16 * 7, 16 * 4, 16, 16, mainSprites)
+    uiPanel8 = love.graphics.newQuad(16 * 8, 16 * 4, 16, 16, mainSprites)
+    uiPanel9 = love.graphics.newQuad(16 * 9, 16 * 4, 16, 16, mainSprites)
+    
+    local titlePanelOffset = 32 * setUiSize
+    titlePanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, 10, height - titlePanelOffset - 10 , level.name, nil, colorIndex.name, colorIndex.text, false )
+    timePanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, width - 10, 10, "03:24:08 Goal: 05:30", nil, colorIndex.timer, colorIndex.text, true )
+
+    time = 0
+    timer.every(0.1, function() time = time + 1 timePanel = uiHelper.editPanelText(timePanel, formatTime(time) .. " Goal: " .. formatTime(goalTime), colorIndex.text ) end)
+
+    percentPanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, 10, 10, "4/11 43% Done", nil, colorIndex.progress, colorIndex.text, false )
+
+
+
+    selection = {y = 3,x = 4}
+    
+    resize()
+
+    local tx, ty = ensureSelectionVisible()
+
+    
+    gridTransform.offsetX = tx
+    gridTransform.offsetY = ty
+    
+
 end
 
 function game.draw()
+    if width ~= love.graphics.getWidth() or height ~= love.graphics.getHeight() then -- i do it this way becous the resize func doesnt work with maxaiming
+        resize()
+        print("resize")
+    end
+
+    width, height = love.graphics.getDimensions()
+
+    
+
     drawBackground(gridTransform.zoomPixels)
     drawGrid(gridTransform.offsetX, gridTransform.offsetY, gridTransform.zoomPixels)
+
+    uiHelper.drawPanel(titlePanel, setUiSize)
+    uiHelper.drawPanel(timePanel, setUiSize)
+    uiHelper.drawPanel(percentPanel, setUiSize)
+
+    if flashEffect ~= {0, 0, 0, 0} then
+        love.graphics.setColor(flashEffect)
+        love.graphics.rectangle("fill", 0,0, width,height)
+        love.graphics.setColor(1,1,1)
+    end
 end
 
 return game

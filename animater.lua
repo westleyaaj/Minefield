@@ -17,7 +17,6 @@ function animater.update(tables, dt)
     for i, ani in pairs(tables) do
         if ani.active == true then
             ani.timeCount = ani.timeCount + dt
-            print(ani.timeCount)
             
             if ani.timeCount > ani.frameTime then
                 ani.timeCount = 0
