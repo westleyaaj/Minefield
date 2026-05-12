@@ -16,6 +16,8 @@ function love.load()
     width = love.graphics.getWidth()
     height = love.graphics.getHeight()
 
+    mainSprites = love.graphics.newImage("Sprites/LevelTileSet.png")
+
     setUiSize = 1
     fontSize1 = love.graphics.newFont("Font/Born2bSportyFS.otf", 24)
     fontSize2 = love.graphics.newFont("Font/Born2bSportyFS.otf", 48)

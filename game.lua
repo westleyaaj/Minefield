@@ -66,6 +66,18 @@ end
 ---------------------------------------------------Logic Functions--------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------
 
+local function checkMineState()
+    local count = 0
+    for y, row in ipairs(levelGrids.flags) do
+        for x, cell in ipairs(row) do
+            if levelGrids.flags[y][x] == 2 then
+                count = count + 1
+            end
+        end
+    end
+    uiHelper.editPanelText(percentPanel, count .. "/" .. totalMines .. " " .. math.floor(count / totalMines * 100) .. "% Done", colorIndex.text)        
+end
+
 local function getNearByMinesSprite(y, x)
     local mineCount = 0
     
@@ -242,11 +254,18 @@ local function fail(step, x, y)
         levelGrids.flags[y][x] = 2
 
         flashTween = tween.new(1, flashEffect, {1, 1, 1, 0}, 'inSine')
+        checkMineState()
     end
 
 end
 
-function formatTime(timerValue)
+local function endGame()
+    game.keypressed("-")
+    gameEnded = true
+    bannerTween = tween.new(0.2, bannerOffset, {0}, 'inSine')
+end
+
+local function formatTime(timerValue)
     -- Assuming timerValue is 1.0 per second (incrementing by 0.1 every 0.1s)
     local minutes = math.floor(timerValue / 600)
     local seconds = math.floor((timerValue / 10) % 60)
@@ -352,141 +371,147 @@ end
 
 
 function game.keypressed(key)
-    if key == "up" then
-        if selection.y - 1 > 0 then
-            selection.y = selection.y - 1
-            zoomTween = nil
-            -- pan if necessary
-            local tx, ty = ensureSelectionVisible()
+    if not gameEnded then   
+        if key == "up" then
+            if selection.y - 1 > 0 then
+                selection.y = selection.y - 1
+                zoomTween = nil
+                -- pan if necessary
+                local tx, ty = ensureSelectionVisible()
 
-            
+                
 
-            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
-                ty = ty - scrolloffset
-                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                    ty = ty - scrolloffset
+                    moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                end
             end
         end
-    end
-    if key == "down" then
-        if selection.y + 1 < levelSize.y + 1 then
-            selection.y = selection.y + 1
-            zoomTween = nil
-            local tx, ty = ensureSelectionVisible()
+        if key == "down" then
+            if selection.y + 1 < levelSize.y + 1 then
+                selection.y = selection.y + 1
+                zoomTween = nil
+                local tx, ty = ensureSelectionVisible()
 
-            
+                
 
-            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
-                ty = ty + scrolloffset
-                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                    ty = ty + scrolloffset
+                    moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                end
             end
         end
-    end
-    if key == "left" then
-        if selection.x - 1 > 0 then 
-            selection.x = selection.x - 1
-            zoomTween = nil
-            local tx, ty = ensureSelectionVisible()
+        if key == "left" then
+            if selection.x - 1 > 0 then 
+                selection.x = selection.x - 1
+                zoomTween = nil
+                local tx, ty = ensureSelectionVisible()
 
-            
+                
 
 
-            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
-                tx = tx + scrolloffset
-                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                    tx = tx + scrolloffset
+                    moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                end
             end
         end
-    end
-    if key == "right" then
-        if selection.x + 1 < levelSize.x + 1 then
-            selection.x = selection.x + 1
-            zoomTween = nil
-            local tx, ty = ensureSelectionVisible()
+        if key == "right" then
+            if selection.x + 1 < levelSize.x + 1 then
+                selection.x = selection.x + 1
+                zoomTween = nil
+                local tx, ty = ensureSelectionVisible()
 
-             
+                
 
-            if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
-                tx = tx - scrolloffset
-                moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                if tx ~= gridTransform.offsetX or ty ~= gridTransform.offsetY then
+                    tx = tx - scrolloffset
+                    moveTween = tween.new(0.1, gridTransform, {offsetX = tx, offsetY = ty}, 'inSine')
+                end
+            end  
+        end
+        if key == "-" then
+            moveTween = nil
+            local newZoom = gridTransform.zoomPixels - 16
+            local gridW = levelSize.x * newZoom
+            local gridH = levelSize.y * newZoom
+            local newOffsetX = (width - gridW) / 2
+            local newOffsetY = (height - gridH) / 2
+            newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+            -- ensure selection still visible after zoom using the new offsets
+            do
+                local selPixelX = newOffsetX + (selection.x - 1) * newZoom
+                local selPixelY = newOffsetY + (selection.y - 1) * newZoom
+                if selPixelX < 0 then
+                    newOffsetX = newOffsetX - selPixelX
+                elseif selPixelX + newZoom > width then
+                    newOffsetX = newOffsetX - (selPixelX + newZoom - width)
+                end
+                if selPixelY < 0 then
+                    newOffsetY = newOffsetY - selPixelY
+                elseif selPixelY + newZoom > height then
+                    newOffsetY = newOffsetY - (selPixelY + newZoom - height)
+                end
+                newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
             end
+            zoomTween = tween.new(0.1, gridTransform, {
+                zoomPixels = newZoom,
+                offsetX = newOffsetX,
+                offsetY = newOffsetY
+            }, 'inSine')
+        end
+        if key == "=" then
+            moveTween = nil
+            local newZoom = gridTransform.zoomPixels + 16
+            local gridW = levelSize.x * newZoom
+            local gridH = levelSize.y * newZoom
+            local newOffsetX = (width - gridW) / 2
+            local newOffsetY = (height - gridH) / 2
+            newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+            -- check selection relative to the new offsets
+            do
+                local selPixelX = newOffsetX + (selection.x - 1) * newZoom
+                local selPixelY = newOffsetY + (selection.y - 1) * newZoom
+                if selPixelX < 0 then
+                    newOffsetX = newOffsetX - selPixelX
+                elseif selPixelX + newZoom > width then
+                    newOffsetX = newOffsetX - (selPixelX + newZoom - width)
+                end
+                if selPixelY < 0 then
+                    newOffsetY = newOffsetY - selPixelY
+                elseif selPixelY + newZoom > height then
+                    newOffsetY = newOffsetY - (selPixelY + newZoom - height)
+                end
+                newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
+            end
+            zoomTween = tween.new(0.1, gridTransform, {
+                zoomPixels = newZoom,
+                offsetX = newOffsetX,
+                offsetY = newOffsetY
+            }, 'inSine')
+        end
+        if key == "z" then
+            if levelGrids.mines[selection.y][selection.x] == 0 then
+                levelGrids.flags[selection.y][selection.x] = 1
+            elseif levelGrids.mines[selection.y][selection.x] == 1 then
+                fail(1, selection.x, selection.y)
+            end
+            checkMineState()
+
+        end 
+        if key == "x" then
+            if levelGrids.flags[selection.y][selection.x] ~= 1 then
+                if levelGrids.flags[selection.y][selection.x] == 2 then
+                    levelGrids.flags[selection.y][selection.x] = 0
+                else 
+                    levelGrids.flags[selection.y][selection.x] = 2
+                end
+            end
+            checkMineState()
         end  
-    end
-    if key == "-" then
-        moveTween = nil
-        local newZoom = gridTransform.zoomPixels - 16
-        local gridW = levelSize.x * newZoom
-        local gridH = levelSize.y * newZoom
-        local newOffsetX = (width - gridW) / 2
-        local newOffsetY = (height - gridH) / 2
-        newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
-        -- ensure selection still visible after zoom using the new offsets
-        do
-            local selPixelX = newOffsetX + (selection.x - 1) * newZoom
-            local selPixelY = newOffsetY + (selection.y - 1) * newZoom
-            if selPixelX < 0 then
-                newOffsetX = newOffsetX - selPixelX
-            elseif selPixelX + newZoom > width then
-                newOffsetX = newOffsetX - (selPixelX + newZoom - width)
-            end
-            if selPixelY < 0 then
-                newOffsetY = newOffsetY - selPixelY
-            elseif selPixelY + newZoom > height then
-                newOffsetY = newOffsetY - (selPixelY + newZoom - height)
-            end
-            newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
-        end
-        zoomTween = tween.new(0.1, gridTransform, {
-            zoomPixels = newZoom,
-            offsetX = newOffsetX,
-            offsetY = newOffsetY
-        }, 'inSine')
-    end
-    if key == "=" then
-        moveTween = nil
-        local newZoom = gridTransform.zoomPixels + 16
-        local gridW = levelSize.x * newZoom
-        local gridH = levelSize.y * newZoom
-        local newOffsetX = (width - gridW) / 2
-        local newOffsetY = (height - gridH) / 2
-        newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
-        -- check selection relative to the new offsets
-        do
-            local selPixelX = newOffsetX + (selection.x - 1) * newZoom
-            local selPixelY = newOffsetY + (selection.y - 1) * newZoom
-            if selPixelX < 0 then
-                newOffsetX = newOffsetX - selPixelX
-            elseif selPixelX + newZoom > width then
-                newOffsetX = newOffsetX - (selPixelX + newZoom - width)
-            end
-            if selPixelY < 0 then
-                newOffsetY = newOffsetY - selPixelY
-            elseif selPixelY + newZoom > height then
-                newOffsetY = newOffsetY - (selPixelY + newZoom - height)
-            end
-            newOffsetX, newOffsetY = clampOffsets(newOffsetX, newOffsetY, newZoom)
-        end
-        zoomTween = tween.new(0.1, gridTransform, {
-            zoomPixels = newZoom,
-            offsetX = newOffsetX,
-            offsetY = newOffsetY
-        }, 'inSine')
-    end
-    if key == "z" then
-        if levelGrids.mines[selection.y][selection.x] == 0 then
-            levelGrids.flags[selection.y][selection.x] = 1
-        elseif levelGrids.mines[selection.y][selection.x] == 1 then
-            fail(1, selection.x, selection.y)
-        end
+    else
 
-    end 
-    if key == "x" then
-        if levelGrids.flags[selection.y][selection.x] ~= 1 then
-            if levelGrids.flags[selection.y][selection.x] == 2 then
-                levelGrids.flags[selection.y][selection.x] = 0
-            else 
-                levelGrids.flags[selection.y][selection.x] = 2
-            end
-        end
-    end  
+    end
     if key == "r" then 
         resize()
         width, height = love.graphics.getDimensions()
@@ -494,7 +519,10 @@ function game.keypressed(key)
 end
 
 function game.update(dt)
-    timer.update(dt)
+    if not gameEnded then
+        timer.update(dt)
+    end
+    
     animater.update(animations, dt)
     if zoomTween then
         zoomTween:update(dt)
@@ -505,6 +533,9 @@ function game.update(dt)
     if flashTween then
         flashTween:update(dt)
     end    
+    if bannerTween then
+        bannerTween:update(dt)
+    end  
 end
 
 function game.load()
@@ -517,10 +548,11 @@ function game.load()
     moveTween = nil
     flashTween = nil
 
+    bannerTween = nil
+    bannerOffset = {100}
 
-   
+    gameEnded = false
 
-    
     scrolloffset = 60 --used to offset the output of ensureSelectionVisible() so that the water and border can be seen 
 
 
@@ -534,6 +566,15 @@ function game.load()
     levelGrids.modifiers = level.mods -- 0 = none 1 = Up 2 = Right 3 = Down 4 = Left
     levelGrids.walls = level.walls
 
+    totalMines = 0
+    for y, row in ipairs(levelGrids.mines) do
+        for x, cell in ipairs(row) do
+            if cell == 1 then
+                totalMines = totalMines + 1
+            end
+        end
+    end
+
     goalTime = 5000
 
     levelSize = {}
@@ -545,7 +586,7 @@ function game.load()
     boom = love.audio.newSource("Sounds/boomAndFlash.wav", "stream")
 
     -- load sprites
-    mainSprites = love.graphics.newImage("Sprites/LevelTileSet.png")
+    
 
     --todo themes
     number0 = love.graphics.newQuad(16 * 9, 0, 16, 16, mainSprites)
@@ -604,14 +645,13 @@ function game.load()
     
     local titlePanelOffset = 32 * setUiSize
     titlePanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, 10, height - titlePanelOffset - 10 , level.name, nil, colorIndex.name, colorIndex.text, false )
-    timePanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, width - 10, 10, "03:24:08 Goal: 05:30", nil, colorIndex.timer, colorIndex.text, true )
-
+    
     time = 0
     timer.every(0.1, function() time = time + 1 timePanel = uiHelper.editPanelText(timePanel, formatTime(time) .. " Goal: " .. formatTime(goalTime), colorIndex.text ) end)
+    timePanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, width - 10, 10, formatTime(time) .. " Goal: " .. formatTime(goalTime), nil, colorIndex.timer, colorIndex.text, true )
 
-    percentPanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, 10, 10, "4/11 43% Done", nil, colorIndex.progress, colorIndex.text, false )
 
-
+    percentPanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, 10, 10, "0/" .. totalMines .. " 0% Done", nil, colorIndex.progress, colorIndex.text, false )
 
     selection = {y = 3,x = 4}
     
@@ -622,6 +662,8 @@ function game.load()
     
     gridTransform.offsetX = tx
     gridTransform.offsetY = ty
+
+    endGame()
     
 
 end
@@ -648,6 +690,11 @@ function game.draw()
         love.graphics.rectangle("fill", 0,0, width,height)
         love.graphics.setColor(1,1,1)
     end
+
+    if gameEnded then
+        uiHelper.drawEndBanner(bannerOffset[1], time, goalTime)
+    end
+
 end
 
 return game
