@@ -1,15 +1,5 @@
 uiHelper = {}
 
-local function formatTime(timerValue)
-    -- Assuming timerValue is 1.0 per second (incrementing by 0.1 every 0.1s)
-    local minutes = math.floor(timerValue / 600)
-    local seconds = math.floor((timerValue / 10) % 60)
-    local tenths  = math.floor(timerValue % 10)
-
-    -- %02d pads integers to 2 digits with a leading zero
-    -- %d is a standard intege 
-    return string.format("%02d:%02d.%d", minutes, seconds, tenths)
-end
 
 function uiHelper.drawPanel(panel, uisize)
     -- find width
@@ -118,7 +108,7 @@ function uiHelper.drawPanel(panel, uisize)
 
 end 
 
-function uiHelper.drawbutton(panel, uisize, state)
+function uiHelper.drawbutton(panel, uisize, x, y, state)
     -- find width
     if uisize == 1 then
         textSize = panel.text1Width
@@ -128,56 +118,93 @@ function uiHelper.drawbutton(panel, uisize, state)
         textSize = panel.text3Width
     end
 
-    quadSize = 16 * uisize
-    panelWidthTiles = math.ceil(textSize / quadSize)
-    truePanelWidthTiles = panelWidthTiles + 2
-    panelWidth = quadSize * truePanelWidthTiles
+    local quadSize = 16 * uisize
+    local panelWidthTiles = math.ceil(textSize / quadSize)
+    local truePanelWidthTiles = panelWidthTiles + 2
+    local panelWidth = quadSize * truePanelWidthTiles
    
-    differice = panelWidth - textSize
-    panelWidthOffset = math.floor(differice / 2)
+    local differice = panelWidth - textSize
+    local panelWidthOffset = math.floor(differice / 2)
     -- draw panel
 
-    currentX = panel.x
-    currentY = panel.y
-
-
-
+    local currentX = x
+    local currentY = y
 
     love.graphics.setColor(panel.color)
 
-        -- top
-    love.graphics.draw(mainSprites, panel.quads[1], currentX, currentY, 0, uisize, uisize)
+    -- top
+    if state == 1 then
+        love.graphics.draw(mainSprites, panel.quadsInactive[1], currentX, currentY, 0, uisize, uisize)
+    elseif state == 2 then
+        love.graphics.draw(mainSprites, panel.quadsActive[1], currentX, currentY, 0, uisize, uisize)
+    elseif state == 3 then
+        love.graphics.draw(mainSprites, panel.quadsClicked[1], currentX, currentY, 0, uisize, uisize)
+    end
+    
     currentX = currentX + quadSize 
         
     for i = 1, panelWidthTiles do
-        love.graphics.draw(mainSprites, panel.quads[2], currentX, currentY, 0, uisize, uisize)
+        if state == 1 then
+            love.graphics.draw(mainSprites, panel.quadsInactive[2], currentX, currentY, 0, uisize, uisize)
+        elseif state == 2 then
+            love.graphics.draw(mainSprites, panel.quadsActive[2], currentX, currentY, 0, uisize, uisize)
+        elseif state == 3 then
+            love.graphics.draw(mainSprites, panel.quadsClicked[2], currentX, currentY, 0, uisize, uisize)
+        end
+
         currentX = currentX + quadSize 
     end
 
-    love.graphics.draw(mainSprites, panel.quads[3], currentX, currentY, 0, uisize, uisize)
+    if state == 1 then
+        love.graphics.draw(mainSprites, panel.quadsInactive[3], currentX, currentY, 0, uisize, uisize)
+    elseif state == 2 then
+        love.graphics.draw(mainSprites, panel.quadsActive[3], currentX, currentY, 0, uisize, uisize)
+    elseif state == 3 then
+        love.graphics.draw(mainSprites, panel.quadsClicked[3], currentX, currentY, 0, uisize, uisize)
+    end
     currentY = currentY + quadSize
         
-    currentX = panel.x
+    currentX = x
 
     -- bottom
-    love.graphics.draw(mainSprites, panel.quads[7], currentX, currentY, 0, uisize, uisize)
+    if state == 1 then
+        love.graphics.draw(mainSprites, panel.quadsInactive[4], currentX, currentY, 0, uisize, uisize)
+    elseif state == 2 then
+        love.graphics.draw(mainSprites, panel.quadsActive[4], currentX, currentY, 0, uisize, uisize)
+    elseif state == 3 then
+        love.graphics.draw(mainSprites, panel.quadsClicked[4], currentX, currentY, 0, uisize, uisize)
+    end
+
     currentX = currentX + quadSize 
 
     for i = 1, panelWidthTiles do
-        love.graphics.draw(mainSprites, panel.quads[8], currentX, currentY, 0, uisize, uisize)
+        if state == 1 then
+            love.graphics.draw(mainSprites, panel.quadsInactive[5], currentX, currentY, 0, uisize, uisize)
+        elseif state == 2 then
+            love.graphics.draw(mainSprites, panel.quadsActive[5], currentX, currentY, 0, uisize, uisize)
+        elseif state == 3 then
+            love.graphics.draw(mainSprites, panel.quadsClicked[5], currentX, currentY, 0, uisize, uisize)
+        end
+
         currentX = currentX + quadSize        
     end
 
-    love.graphics.draw(mainSprites, panel.quads[9], currentX, currentY, 0, uisize, uisize)
+    if state == 1 then
+        love.graphics.draw(mainSprites, panel.quadsInactive[6], currentX, currentY, 0, uisize, uisize)
+    elseif state == 2 then
+        love.graphics.draw(mainSprites, panel.quadsActive[6], currentX, currentY, 0, uisize, uisize)
+    elseif state == 3 then
+        love.graphics.draw(mainSprites, panel.quadsClicked[6], currentX, currentY, 0, uisize, uisize)
+    end
     love.graphics.setColor(1, 1, 1)
 
     -- draw text
     if uisize == 1 then
-        love.graphics.draw(panel.text1, panel.x + panelWidthOffset, panel.y)
+        love.graphics.draw(panel.text1, x + panelWidthOffset, y)
     elseif uisize == 2 then
-        love.graphics.draw(panel.text2, panel.x + panelWidthOffset, panel.y)
+        love.graphics.draw(panel.text2, x + panelWidthOffset, y)
     elseif uisize == 3 then
-        love.graphics.draw(panel.text3, panel.x + panelWidthOffset, panel.y)
+        love.graphics.draw(panel.text3, x + panelWidthOffset, y)
     end
     
 
@@ -242,70 +269,5 @@ function uiHelper.makeButton(quadsInactive, quadsActive, quadsClicked, text, col
 
     return newPanel
 end
-
-
-
-
-------------------------------------------------------------------------------------------------------------
---------------------------------------------Built in panels-------------------------------------------------
-------------------------------------------------------------------------------------------------------------
-
-function uiHelper.drawEndBanner(offsetAnimation, time, goal)
-    love.graphics.setColor(colorIndex.timer)
-    love.graphics.rectangle("fill", 0, height - 100 + offsetAnimation, width, 100 )
-
-    love.graphics.setColor(1,1,1)
-
-    local title = love.graphics.newText( fontSize2, {colorIndex.text, "Area Compleate"} )
-    love.graphics.draw(title, 40, height - 60 + offsetAnimation - title:getHeight() / 2)
-
-    if goal > time then
-        local subTitle = love.graphics.newText( fontSize1, {colorIndex.text, "Goal Reached   " .. "Goal Time:" .. formatTime(goal) .. " Your Time:" .. formatTime(time) } )
-        love.graphics.draw(subTitle, 40, height - 15 + offsetAnimation - title:getHeight() / 2)
-    else
-        local subTitle = love.graphics.newText( fontSize1, {colorIndex.text, "Goal Failed   " .. "Goal Time:" .. formatTime(goal) .. " Your Time:" .. formatTime(time) } )
-        love.graphics.draw(subTitle, 40, height - 15 + offsetAnimation - title:getHeight() / 2)
-    end
-
-    
-    
-
-end
-
---------------------------------------------------------------------------------------------------
-
-function uiHelper.load ()
-    endPanelUiState = 0
-
-    buttonQuadsInactive = {
-        love.graphics.newQuad(16 * 3, 16 * 2, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 4, 16 * 2, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 5, 16 * 2, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 3, 16 * 3, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 4, 16 * 3, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 5, 16 * 3, 16, 16, mainSprites)
-    }
-    buttonQuadsActive = {
-        love.graphics.newQuad(16 * 3, 16 * 4, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 4, 16 * 4, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 5, 16 * 4, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 3, 16 * 5, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 4, 16 * 5, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 5, 16 * 5, 16, 16, mainSprites)
-    }
-    buttonQuadsClicked = {
-        love.graphics.newQuad(16 * 3, 16 * 6, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 4, 16 * 6, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 5, 16 * 6, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 3, 16 * 7, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 4, 16 * 7, 16, 16, mainSprites),
-        love.graphics.newQuad(16 * 5, 16 * 7, 16, 16, mainSprites)
-    }
-
-    endPanelExitButton = uiHelper.makeButton(buttonQuadsInactive, buttonQuadsActive, buttonQuadsClicked, "Next", colorIndex.name)
-    
-end
-
-
 
 return uiHelper

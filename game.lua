@@ -75,13 +75,16 @@ local function checkMineState()
             end
         end
     end
-    uiHelper.editPanelText(percentPanel, count .. "/" .. totalMines .. " " .. math.floor(count / totalMines * 100) .. "% Done", colorIndex.text)        
+    uiHelper.editPanelText(percentPanel, count .. "/" .. totalMines .. " " .. math.floor(count / totalMines * 100) .. "% Done", colorIndex.text)
+    if count == totalMines then
+        endGame()
+    end
 end
 
 local function getNearByMinesSprite(y, x)
     local mineCount = 0
     
-   if levelGrids.modifiers[y][x] == 0 then
+   if get(levelGrids.modifiers, y, x) == 0 then
 
         -- above
         if get(levelGrids.mines, y - 1, x) == 1 then
@@ -157,7 +160,7 @@ local function getNearByMinesSprite(y, x)
     end
 
 
-    if levelGrids.modifiers[y][x] == 1 then -- Up arrow
+    if get(levelGrids.modifiers, y, x) == 1 then -- Up arrow
         for upY = y - 1, 1, -1 do
             if levelGrids.mines[upY] and levelGrids.mines[upY][x] == 1 then
                 mineCount = mineCount + 1
@@ -171,7 +174,7 @@ local function getNearByMinesSprite(y, x)
         end
     end
 
-    if levelGrids.modifiers[y][x] == 2 then -- Right arrow
+    if get(levelGrids.modifiers, y, x) == 2 then -- Right arrow
         for rightX = x + 1, #levelGrids.mines[y] do
             if levelGrids.walls[y][rightX] == 1 then
                 break
@@ -185,7 +188,7 @@ local function getNearByMinesSprite(y, x)
         end
     end
 
-    if levelGrids.modifiers[y][x] == 3 then -- Down arrow
+    if get(levelGrids.modifiers, y, x) == 3 then -- Down arrow
         for downY = y + 1, #levelGrids.mines do
             if levelGrids.walls[downY][x] == 2 then
                 break
@@ -199,7 +202,7 @@ local function getNearByMinesSprite(y, x)
         end
     end
 
-    if levelGrids.modifiers[y][x] == 4 then -- Left arow
+    if get(levelGrids.modifiers, y, x) == 4 then -- Left arow
         for leftX = x - 1, 1, -1 do
             if levelGrids.mines[y] and levelGrids.mines[y][leftX] == 1 then
                 mineCount = mineCount + 1
@@ -237,7 +240,7 @@ local function getNearByMinesSprite(y, x)
 
 end
 
-local function fail(step, x, y)
+function fail(step, x, y)
     if step == 1 then
         love.audio.play(boom)
         flashTween = tween.new(0.1, flashEffect, {1, 1, 1, 1}, 'inSine')
@@ -259,21 +262,99 @@ local function fail(step, x, y)
 
 end
 
-local function endGame()
-    game.keypressed("-")
-    gameEnded = true
-    bannerTween = tween.new(0.2, bannerOffset, {0}, 'inSine')
+function drawCountdown(state)
+    part1 = love.graphics.newText( fontSize2, {state.part1Color, "1"} ) --slow
+    love.graphics.draw(part1, width / 2, state.part1position)
+    part2 = love.graphics.newText( fontSize2, {state.part2Color, "2"} ) --slow
+    love.graphics.draw(part2, width / 2, state.part2position)
+    part3 = love.graphics.newText( fontSize2, {state.part3Color, "3"} ) --slow
+    love.graphics.draw(part3, width / 2, state.part3position)
+    part4 = love.graphics.newText( fontSize2, {state.part4Color, "Start"} ) --slow
+    love.graphics.draw(part4, width / 2, state.part4position)
 end
 
-local function formatTime(timerValue)
-    -- Assuming timerValue is 1.0 per second (incrementing by 0.1 every 0.1s)
-    local minutes = math.floor(timerValue / 600)
-    local seconds = math.floor((timerValue / 10) % 60)
-    local tenths  = math.floor(timerValue % 10)
+function startGame(step)
+    if step == 1 then
+        countdownTween = tween.new(0.3, countdownState, {
+            part1position = height / 2,
+            part1Color = {1,0,0,1},
+            part2position = -20,
+            part2Color = {0,1,0,1},
+            part3position = -20,
+            part3Color = {0,0,1,1},
+            part4position = -20,
+            part4Color = {1,1,1,1}
+        }, 'inSine')
+        timer.after(0.3, function() startGame(2) print("aaaaaaaaaaaaa") end)
+    end
+    if step == 2 then
+        countdownTween = tween.new(0.3, countdownState, {
+            part1position = height / 2,
+            part1Color = {1,0,0,0},
+            part2position = height / 2,
+            part2Color = {0,1,0,1},
+            part3position = -20,
+            part3Color = {0,0,1,1},
+            part4position = -20,
+            part4Color = {1,1,1,1}
+        }, 'inSine')
+        timer.after(0.3, function() startGame(3) end)
+        love.audio.play(blip1)
+    end
+    if step == 3 then
+        print("3")
+        countdownTween = tween.new(0.3, countdownState, {
+            part1position = height / 2,
+            part1Color = {1,0,0,0},
+            part2position = height / 2,
+            part2Color = {0,1,0,0},
+            part3position = height / 2,
+            part3Color = {0,0,1,1},
+            part4position = -20,
+            part4Color = {1,1,1,1}
+        }, 'inSine')
+        timer.after(0.3, function() startGame(4) end)
+        love.audio.play(blip1)
+    end
+    if step == 4 then
+        countdownTween = tween.new(0.3, countdownState, {
+            part1position = height / 2,
+            part1Color = {1,0,0,0},
+            part2position = height / 2,
+            part2Color = {0,1,0,0},
+            part3position = height / 2,
+            part3Color = {0,0,1,0},
+            part4position = height / 2,
+            part4Color = {1,1,1,1}
+        }, 'inSine')
+        timer.after(0.3, function() startGame(5) end)
+        love.audio.play(blip1)
+    end
+    if step == 5 then
+        countdownTween = tween.new(0.3, countdownState, {
+            part1position = height / 2,
+            part1Color = {1,0,0,0},
+            part2position = height / 2,
+            part2Color = {0,1,0,0},
+            part3position = height / 2,
+            part3Color = {0,0,1,0},
+            part4position = height / 2,
+            part4Color = {1,1,1,0}
+        }, 'inSine')
+        timer.after(0.3, function() startGame(6) end)
+        love.audio.play(blip2)
+    end
+    if step == 6 then
+        gamePaused = false
+    end
+    
+end
 
-    -- %02d pads integers to 2 digits with a leading zero
-    -- %d is a standard intege 
-    return string.format("%02d:%02d.%d", minutes, seconds, tenths)
+function endGame()
+    game.keypressed("-")
+    gamePaused = true
+    gameEnded = true
+    uiPanels.openEndBanner(time, goalTime)
 end
 
 --------------------------------------------------------------------------------------------------------------------------------
@@ -306,11 +387,35 @@ local function drawGrid(gridX, gridY, size) -- size are the pixel size not a sca
             end
             if levelGrids.mines[y][x] ~= 2 and levelGrids.flags[y][x] == 1 then
                 love.graphics.draw(mainSprites, getNearByMinesSprite(y, x), size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+                -- modifiers 0 = none 1 = Up 2 = Right 3 = Down 4 = Left
+                if get(levelGrids.modifiers, y, x) == 1 then
+                    love.graphics.draw(mainSprites, topMod, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+                end
+                if get(levelGrids.modifiers, y, x) == 2 then
+                    love.graphics.draw(mainSprites, rightMod, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+                end
+                if get(levelGrids.modifiers, y, x) == 3 then
+                    love.graphics.draw(mainSprites, downMod, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+                end
+                if get(levelGrids.modifiers, y, x) == 4 then
+                    love.graphics.draw(mainSprites, leftMod, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+                end
 
             end
             if levelGrids.mines[y][x] ~= 2 and levelGrids.flags[y][x] == 2 then
                 love.graphics.draw(mainSprites, flagged, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
 
+            end
+
+            -- walls
+            if levelGrids.walls[y][x] == 1 then
+                love.graphics.draw(mainSprites, leftWall, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+            end
+            if levelGrids.walls[y][x] == 2 then
+                love.graphics.draw(mainSprites, topWall, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
+            end
+            if levelGrids.walls[y][x] == 3 then
+                love.graphics.draw(mainSprites, leftTopWall, size * x + gridX - size, size * y + gridY - size, 0, size / 16, size / 16)
             end
             
             -- Borders
@@ -371,7 +476,7 @@ end
 
 
 function game.keypressed(key)
-    if not gameEnded then   
+    if not gamePaused then   
         if key == "up" then
             if selection.y - 1 > 0 then
                 selection.y = selection.y - 1
@@ -519,9 +624,9 @@ function game.keypressed(key)
 end
 
 function game.update(dt)
-    if not gameEnded then
-        timer.update(dt)
-    end
+    
+    timer.update(dt)
+    
     
     animater.update(animations, dt)
     if zoomTween then
@@ -533,9 +638,13 @@ function game.update(dt)
     if flashTween then
         flashTween:update(dt)
     end    
-    if bannerTween then
-        bannerTween:update(dt)
-    end  
+    if countdownTween then
+        countdownTween:update(dt)
+    end   
+    if countdownTween2 then
+        countdownTween2:update(dt)
+    end   
+
 end
 
 function game.load()
@@ -548,10 +657,14 @@ function game.load()
     moveTween = nil
     flashTween = nil
 
+    countdownTween = nil
+    countdownTween2 = nil
+
     bannerTween = nil
     bannerOffset = {100}
 
     gameEnded = false
+    gamePaused = true
 
     scrolloffset = 60 --used to offset the output of ensureSelectionVisible() so that the water and border can be seen 
 
@@ -564,7 +677,7 @@ function game.load()
     levelGrids.mines = level.mines -- 0 = safe, 1 = mine, 2 = empty 
     levelGrids.flags = level.flags -- 0 = hidden 1 = revealed 2 = flagged
     levelGrids.modifiers = level.mods -- 0 = none 1 = Up 2 = Right 3 = Down 4 = Left
-    levelGrids.walls = level.walls
+    levelGrids.walls = level.walls -- 1 = left 2 = top 3 = both 
 
     totalMines = 0
     for y, row in ipairs(levelGrids.mines) do
@@ -584,6 +697,8 @@ function game.load()
 
     --load sound
     boom = love.audio.newSource("Sounds/boomAndFlash.wav", "stream")
+    blip1 = love.audio.newSource("Sounds/startingBlip.wav", "stream")
+    blip2 = love.audio.newSource("Sounds/startingBlip2.wav", "stream")
 
     -- load sprites
     
@@ -605,6 +720,15 @@ function game.load()
     cell1 = love.graphics.newQuad(16 * 12, 0, 16, 16, mainSprites)
     cell2 = love.graphics.newQuad(16 * 13, 0, 16, 16, mainSprites)
     cell3 = love.graphics.newQuad(16 * 14, 0, 16, 16, mainSprites)
+
+    leftTopWall = love.graphics.newQuad(16 * 8, 16, 16, 16, mainSprites)
+    leftWall = love.graphics.newQuad(16 * 9, 16, 16, 16, mainSprites)
+    topWall = love.graphics.newQuad(16 * 10, 16, 16, 16, mainSprites)
+
+    rightMod = love.graphics.newQuad(16 * 4, 16, 16, 16, mainSprites)
+    downMod = love.graphics.newQuad(16 * 5, 16, 16, 16, mainSprites)
+    leftMod = love.graphics.newQuad(16 * 6, 16, 16, 16, mainSprites)
+    topMod = love.graphics.newQuad(16 * 7, 16, 16, 16, mainSprites)
 
     bottomBorder = love.graphics.newQuad(16 * 11, 16, 16, 16, mainSprites)
     sideBorder = love.graphics.newQuad(16 * 13, 16, 16, 16, mainSprites)
@@ -663,7 +787,22 @@ function game.load()
     gridTransform.offsetX = tx
     gridTransform.offsetY = ty
 
-    endGame()
+
+    countdownState = {
+        active = true,
+        part1position = -20,
+        part1Color = {1,0,0,1},
+        part2position = -20,
+        part2Color = {0,1,0,1},
+        part3position = -20,
+        part3Color = {0,0,1,1},
+        part4position = -20,
+        part4Color = {1,1,1,1}
+    }
+    
+    startGame(1)
+
+    --endGame()
     
 
 end
@@ -685,15 +824,17 @@ function game.draw()
     uiHelper.drawPanel(timePanel, setUiSize)
     uiHelper.drawPanel(percentPanel, setUiSize)
 
+    if countdownState.active then
+        drawCountdown(countdownState)
+    end
+
+
     if flashEffect ~= {0, 0, 0, 0} then
         love.graphics.setColor(flashEffect)
         love.graphics.rectangle("fill", 0,0, width,height)
         love.graphics.setColor(1,1,1)
     end
 
-    if gameEnded then
-        uiHelper.drawEndBanner(bannerOffset[1], time, goalTime)
-    end
 
 end
 
