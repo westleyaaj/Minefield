@@ -10,12 +10,34 @@ scenes.level = require ('game')
 
 state = scenes.level
 
+local gameWidth = 1200   -- Your target internal width
+local gameHeight = 800  -- Your target internal height
+local canvas
+local scale = 1
+local scaleMode = "fit" -- use "fit" to preserve all content, "fill" to maximize visible area and crop edges if needed
+
+local function updateScale(w, h)
+    if scaleMode == "fill" then
+        scale = math.max(w / gameWidth, h / gameHeight)
+    else
+        scale = math.min(w / gameWidth, h / gameHeight)
+    end
+end
 
 function love.load()
+    -- Create the virtual canvas
+    canvas = love.graphics.newCanvas(gameWidth, gameHeight)
+    
+    -- If you want crisp pixel art, set the filter to 'nearest'
+    canvas:setFilter("nearest", "nearest")
+    
+    -- Calculate initial scale based on current window size
+    local windowWidth = love.graphics.getWidth()
+    local windowHeight = love.graphics.getHeight()
+    updateScale(windowWidth, windowHeight)
+
     love.keyboard.setKeyRepeat(true)
     love.graphics.setDefaultFilter('nearest', 'nearest')
-    width = love.graphics.getWidth()
-    height = love.graphics.getHeight()
 
 
     mainSprites = love.graphics.newImage("Sprites/LevelTileSet.png")
@@ -63,24 +85,60 @@ function love.update(dt)
     uiPanels.update(dt)
 end
 
+
 function love.draw()
+--    if width ~= love.graphics.getWidth() or height ~= love.graphics.getHeight() then -- i do it this way becous the resize func doesnt work with maxaiming
+--        scale = math.min(width / gameWidth, height / gameHeight)
+--    end
+
+    widthReal, heightReal = love.graphics.getDimensions()
+
+    updateScale(widthReal, heightReal)
+
+
+-- 1. Redirect all drawing to the canvas
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear() -- Clear the canvas
     
     if state and type(state.draw) == "function" then
         state.draw()
     end
     uiPanels.draw()
+
+    -- 2. Stop drawing to the canvas, switch back to the main screen
+    love.graphics.setCanvas()
+    
+    -- 3. Draw the canvas to the screen, centered with letterboxing
+    local offsetX = (love.graphics.getWidth() - (gameWidth * scale)) / 2
+    local offsetY = (love.graphics.getHeight() - (gameHeight * scale)) / 2
+    
+    love.graphics.draw(canvas, offsetX, offsetY, 0, scale, scale)
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
+    -- Convert screen coordinates to canvas coordinates
+    local offsetX = (love.graphics.getWidth() - (gameWidth * scale)) / 2
+    local offsetY = (love.graphics.getHeight() - (gameHeight * scale)) / 2
+    
+    local canvasX = (x - offsetX) / scale
+    local canvasY = (y - offsetY) / scale
+    
     if state and type(state.mousemoved) == "function" then
-        state.mousemoved(x, y, dx, dy, istouch)
+        state.mousemoved(canvasX, canvasY, dx / scale, dy / scale, istouch)
     end
 end
 
 function love.mousepressed(x, y, button, istouch, presses)
-    print("main.mousepressed", x, y, button)
+    -- Convert screen coordinates to canvas coordinates
+    local offsetX = (love.graphics.getWidth() - (gameWidth * scale)) / 2
+    local offsetY = (love.graphics.getHeight() - (gameHeight * scale)) / 2
+    
+    local canvasX = (x - offsetX) / scale
+    local canvasY = (y - offsetY) / scale
+    
+    print("main.mousepressed", canvasX, canvasY, button)
     if state and type(state.mousepressed) == "function" then
-        state.mousepressed(x, y, button, istouch, presses)
+        state.mousepressed(canvasX, canvasY, button, istouch, presses)
     end
 end
 

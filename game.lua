@@ -36,6 +36,21 @@ local function clampOffsets(offsetX, offsetY, zoom)
     return offsetX, offsetY
 end
 
+local revealParticleSystem
+
+local function spawnRevealParticles(cx, cy)
+    if revealParticleSystem then
+        revealParticleSystem:setPosition(cx, cy)
+        revealParticleSystem:emit(24)
+    end
+end
+
+local function drawRevealParticles()
+    if revealParticleSystem then
+        love.graphics.draw(revealParticleSystem, 0, 0)
+    end
+end
+
 -- ensure the currently selected cell is within the visible window. Returns
 -- new offsets (possibly unchanged) which should then be applied (tweened).
 local function ensureSelectionVisible()
@@ -68,16 +83,22 @@ end
 
 local function checkMineState()
     local count = 0
+    local badflags = 0
     for y, row in ipairs(levelGrids.flags) do
         for x, cell in ipairs(row) do
             if levelGrids.flags[y][x] == 2 then
                 count = count + 1
+                if levelGrids.mines[y][x] ~= 1 then
+                    badflags = badflags + 1
+                end
             end
         end
     end
     uiHelper.editPanelText(percentPanel, count .. "/" .. totalMines .. " " .. math.floor(count / totalMines * 100) .. "% Done", colorIndex.text)
-    if count == totalMines then
-        endGame()
+    if badflags == 0 then
+        if count == totalMines then
+            endGame()
+        end
     end
 end
 
@@ -264,60 +285,60 @@ end
 
 function drawCountdown(state)
     part1 = love.graphics.newText( fontSize2, {state.part1Color, "1"} ) --slow
-    love.graphics.draw(part1, width / 2, state.part1position)
+    love.graphics.draw(part1, width / 2 - fontSize2:getWidth("1") / 2, state.part1position)
     part2 = love.graphics.newText( fontSize2, {state.part2Color, "2"} ) --slow
-    love.graphics.draw(part2, width / 2, state.part2position)
+    love.graphics.draw(part2, width / 2 - fontSize2:getWidth("2") / 2, state.part2position)
     part3 = love.graphics.newText( fontSize2, {state.part3Color, "3"} ) --slow
-    love.graphics.draw(part3, width / 2, state.part3position)
+    love.graphics.draw(part3, width / 2 - fontSize2:getWidth("3") / 2, state.part3position)
     part4 = love.graphics.newText( fontSize2, {state.part4Color, "Start"} ) --slow
-    love.graphics.draw(part4, width / 2, state.part4position)
+    love.graphics.draw(part4, width / 2 - fontSize2:getWidth("Start") / 2, state.part4position)
 end
 
 function startGame(step)
     if step == 1 then
-        countdownTween = tween.new(0.3, countdownState, {
+        countdownTween = tween.new(0.4, countdownState, {
             part1position = height / 2,
             part1Color = {1,0,0,1},
-            part2position = -20,
+            part2position = -80,
             part2Color = {0,1,0,1},
-            part3position = -20,
+            part3position = -80,
             part3Color = {0,0,1,1},
-            part4position = -20,
+            part4position = -80,
             part4Color = {1,1,1,1}
         }, 'inSine')
-        timer.after(0.3, function() startGame(2) print("aaaaaaaaaaaaa") end)
+        timer.after(0.4, function() startGame(2) print("aaaaaaaaaaaaa") end)
     end
     if step == 2 then
-        countdownTween = tween.new(0.3, countdownState, {
+        countdownTween = tween.new(0.4, countdownState, {
             part1position = height / 2,
             part1Color = {1,0,0,0},
             part2position = height / 2,
             part2Color = {0,1,0,1},
-            part3position = -20,
+            part3position = -80,
             part3Color = {0,0,1,1},
-            part4position = -20,
+            part4position = -80,
             part4Color = {1,1,1,1}
         }, 'inSine')
-        timer.after(0.3, function() startGame(3) end)
+        timer.after(0.4, function() startGame(3) end)
         love.audio.play(blip1)
     end
     if step == 3 then
         print("3")
-        countdownTween = tween.new(0.3, countdownState, {
+        countdownTween = tween.new(0.4, countdownState, {
             part1position = height / 2,
             part1Color = {1,0,0,0},
             part2position = height / 2,
             part2Color = {0,1,0,0},
             part3position = height / 2,
             part3Color = {0,0,1,1},
-            part4position = -20,
+            part4position = -80,
             part4Color = {1,1,1,1}
         }, 'inSine')
-        timer.after(0.3, function() startGame(4) end)
+        timer.after(0.4, function() startGame(4) end)
         love.audio.play(blip1)
     end
     if step == 4 then
-        countdownTween = tween.new(0.3, countdownState, {
+        countdownTween = tween.new(0.4, countdownState, {
             part1position = height / 2,
             part1Color = {1,0,0,0},
             part2position = height / 2,
@@ -327,11 +348,11 @@ function startGame(step)
             part4position = height / 2,
             part4Color = {1,1,1,1}
         }, 'inSine')
-        timer.after(0.3, function() startGame(5) end)
+        timer.after(0.4, function() startGame(5) end)
         love.audio.play(blip1)
     end
     if step == 5 then
-        countdownTween = tween.new(0.3, countdownState, {
+        countdownTween = tween.new(0.4, countdownState, {
             part1position = height / 2,
             part1Color = {1,0,0,0},
             part2position = height / 2,
@@ -341,7 +362,7 @@ function startGame(step)
             part4position = height / 2,
             part4Color = {1,1,1,0}
         }, 'inSine')
-        timer.after(0.3, function() startGame(6) end)
+        timer.after(0.4, function() startGame(6) end)
         love.audio.play(blip2)
     end
     if step == 6 then
@@ -354,6 +375,8 @@ function endGame()
     game.keypressed("-")
     gamePaused = true
     gameEnded = true
+    win:play()
+    timer.after(0.1, function() win2:play() end)
     uiPanels.openEndBanner(time, goalTime)
 end
 
@@ -469,6 +492,9 @@ function resize()
     
     -- Cancel any ongoing move tween to prevent it from overriding the recentering
     moveTween = nil
+
+    titlePanel.y = height - titlePanelOffset - 10
+    timePanel.x = width - 10
 end
 --------------------------------------------------------------------------------------------------------------------------------
 ---------------------------------------------------Export Functions-------------------------------------------------------------
@@ -596,7 +622,16 @@ function game.keypressed(key)
             }, 'inSine')
         end
         if key == "z" then
-            if levelGrids.mines[selection.y][selection.x] == 0 then
+            if levelGrids.mines[selection.y][selection.x] == 0 then   
+                local centerX = gridTransform.offsetX + (selection.x - 1) * gridTransform.zoomPixels + gridTransform.zoomPixels / 2
+                local centerY = gridTransform.offsetY + (selection.y - 1) * gridTransform.zoomPixels + gridTransform.zoomPixels / 2
+                if levelGrids.flags[selection.y][selection.x] == 0 then
+                    spawnRevealParticles(centerX, centerY)
+                    local randomPitch = love.math.random() * (0.50 - 0.90) + 0.90
+                    dig:setPitch(randomPitch)
+                    dig:play()
+                    print("dig sound played with pitch: " .. randomPitch)
+                end
                 levelGrids.flags[selection.y][selection.x] = 1
             elseif levelGrids.mines[selection.y][selection.x] == 1 then
                 fail(1, selection.x, selection.y)
@@ -610,6 +645,7 @@ function game.keypressed(key)
                     levelGrids.flags[selection.y][selection.x] = 0
                 else 
                     levelGrids.flags[selection.y][selection.x] = 2
+                    flag:play()
                 end
             end
             checkMineState()
@@ -645,10 +681,14 @@ function game.update(dt)
         countdownTween2:update(dt)
     end   
 
+    if revealParticleSystem then
+        revealParticleSystem:update(dt)
+    end
 end
 
 function game.load()
-    width, height = love.graphics.getDimensions()
+    width = 1200
+    height = 800
 
     minBorder = 64
     
@@ -699,6 +739,11 @@ function game.load()
     boom = love.audio.newSource("Sounds/boomAndFlash.wav", "stream")
     blip1 = love.audio.newSource("Sounds/startingBlip.wav", "stream")
     blip2 = love.audio.newSource("Sounds/startingBlip2.wav", "stream")
+    dig = love.audio.newSource("Sounds/dig.wav", "stream")
+    dig:setVolume(0.7)
+    win = love.audio.newSource("Sounds/win.wav", "stream")
+    win2 = love.audio.newSource("Sounds/win2.wav", "stream")
+    flag = love.audio.newSource("Sounds/flag.wav", "stream")
 
     -- load sprites
     
@@ -755,7 +800,21 @@ function game.load()
 
     
     flashEffect = {0,0,0,0}
-    
+
+    local particleImageData = love.image.newImageData(2, 2)
+    particleImageData:mapPixel(function() return 1, 1, 1, 1 end)
+    local particleImage = love.graphics.newImage(particleImageData)
+    revealParticleSystem = love.graphics.newParticleSystem(particleImage, 128)
+    revealParticleSystem:setParticleLifetime(0.05, 0.20)
+    revealParticleSystem:setEmissionRate(0)
+    revealParticleSystem:setSizes(1.5, 1)
+    revealParticleSystem:setSizeVariation(0.8)
+    revealParticleSystem:setSpeed(50, 250)
+    revealParticleSystem:setDirection(-math.pi / 2)
+    revealParticleSystem:setSpread(1.7)
+    revealParticleSystem:setLinearAcceleration(0, -10, 0, -170)
+    revealParticleSystem:setColors(0.8, 0.4, 0.2, 1, 0.8, 0.4, 0.2, 1)
+    revealParticleSystem:setEmissionArea("uniform", 0, 0, 0, false)
 
     uiPanel1 = love.graphics.newQuad(16 * 7, 16 * 2, 16, 16, mainSprites)
     uiPanel2 = love.graphics.newQuad(16 * 8, 16 * 2, 16, 16, mainSprites)
@@ -767,7 +826,7 @@ function game.load()
     uiPanel8 = love.graphics.newQuad(16 * 8, 16 * 4, 16, 16, mainSprites)
     uiPanel9 = love.graphics.newQuad(16 * 9, 16 * 4, 16, 16, mainSprites)
     
-    local titlePanelOffset = 32 * setUiSize
+    titlePanelOffset = 32 * setUiSize
     titlePanel = uiHelper.makePanel({uiPanel1,uiPanel2,uiPanel3,uiPanel4,uiPanel5,uiPanel6,uiPanel7,uiPanel8,uiPanel9}, 10, height - titlePanelOffset - 10 , level.name, nil, colorIndex.name, colorIndex.text, false )
     
     time = 0
@@ -790,13 +849,13 @@ function game.load()
 
     countdownState = {
         active = true,
-        part1position = -20,
+        part1position = -80,
         part1Color = {1,0,0,1},
-        part2position = -20,
+        part2position = -80,
         part2Color = {0,1,0,1},
-        part3position = -20,
+        part3position = -80,
         part3Color = {0,0,1,1},
-        part4position = -20,
+        part4position = -80,
         part4Color = {1,1,1,1}
     }
     
@@ -808,17 +867,18 @@ function game.load()
 end
 
 function game.draw()
-    if width ~= love.graphics.getWidth() or height ~= love.graphics.getHeight() then -- i do it this way becous the resize func doesnt work with maxaiming
-        resize()
-        print("resize")
-    end
+    --if width ~= love.graphics.getWidth() or height ~= love.graphics.getHeight() then -- i do it this way becous the resize func doesnt work with maxaiming
+    --    resize()
+    --    print("resize")
+    --end
 
-    width, height = love.graphics.getDimensions()
+    --width, height = love.graphics.getDimensions()
 
     
 
     drawBackground(gridTransform.zoomPixels)
     drawGrid(gridTransform.offsetX, gridTransform.offsetY, gridTransform.zoomPixels)
+    drawRevealParticles()
 
     uiHelper.drawPanel(titlePanel, setUiSize)
     uiHelper.drawPanel(timePanel, setUiSize)
